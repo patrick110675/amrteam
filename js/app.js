@@ -38,64 +38,67 @@ const defaultData={
 let data=load(), page=new URLSearchParams(location.search).get('page')||'home', scoreMode='team', editId=null, friendCount=1, statOffset=null;
 let scoreState={periodId:'',team:'',name:'',items:{},manual:0,note:'',showPeriod:false}, historyFilter={q:'',periodId:'',team:''};
 
-function load(){try{let x=JSON.parse(localStorage.getItem(KEY));if(!x)return structuredClone(defaultData);x.settings={...defaultData.settings,...(x.settings||{})};x.portalItems=x.portalItems||structuredClone(defaultData.portalItems);return x}catch(e){return structuredClone(defaultData)}}
-
+function normalizeData(x){
+ if(!x)return structuredClone(defaultData);
+ x={...structuredClone(defaultData),...x};
+ x.settings={...defaultData.settings,...(x.settings||{})};
+ x.teams=Array.isArray(x.teams)?x.teams:structuredClone(defaultData.teams);
+ x.rules=Array.isArray(x.rules)?x.rules:structuredClone(defaultData.rules);
+ x.events=Array.isArray(x.events)?x.events:[];
+ x.records=Array.isArray(x.records)?x.records:[];
+ x.portalItems=Array.isArray(x.portalItems)?x.portalItems:structuredClone(defaultData.portalItems);
+ return x;
+}
+function load(){try{return normalizeData(JSON.parse(localStorage.getItem(KEY)))}catch(e){return structuredClone(defaultData)}}
+let cloudTimer=null, cloudApplying=false, cloudReady=false;
 function save(){
  localStorage.setItem(KEY,JSON.stringify(data));
  saveCloud();
 }
-function saveLocalOnly(){localStorage.setItem(KEY,JSON.stringify(data))}
-let cloudSaving=false, cloudLoaded=false;
-async function saveCloud(){
- if(!window.AMRFirebase?.enabled || !window.AMRFirebase?.dataDoc || cloudSaving) return;
- try{
-  cloudSaving=true;
-  await window.AMRFirebase.dataDoc.set({
-   amrData: data,
-   updatedAt: window.AMRFirebase.now()
-  },{merge:true});
- }catch(e){
-  console.error('Firebase 儲存失敗',e);
-  toast('Firebase 儲存失敗，請檢查規則');
- }finally{cloudSaving=false}
+function saveCloud(){
+ const cloud=window.AMRFirebase;
+ if(!cloud?.enabled||!cloud.dataDoc||cloudApplying)return;
+ clearTimeout(cloudTimer);
+ cloudTimer=setTimeout(()=>{
+  cloud.dataDoc.set({amrData:data,updatedAt:cloud.now?cloud.now():new Date()}, {merge:true})
+   .then(()=>console.log('✅ AMR 已同步到 Firebase'))
+   .catch(err=>{console.error('❌ Firebase 同步失敗',err);toast('Firebase 同步失敗，請看 Console')});
+ },350);
 }
-async function loadCloud(){
- if(!window.AMRFirebase?.enabled || !window.AMRFirebase?.dataDoc) return;
- try{
-  let snap=await window.AMRFirebase.dataDoc.get();
-  let cloud=snap.exists ? snap.data()?.amrData : null;
-  if(cloud){
-   data={...structuredClone(defaultData),...cloud};
-   data.settings={...defaultData.settings,...(data.settings||{})};
-   data.portalItems=data.portalItems||structuredClone(defaultData.portalItems);
-   saveLocalOnly();
-   cloudLoaded=true;
+function initCloud(){
+ const cloud=window.AMRFirebase;
+ if(!cloud?.enabled||!cloud.dataDoc){console.warn('Firebase 尚未啟用，暫用本機資料');return;}
+ cloud.dataDoc.get().then(doc=>{
+  if(doc.exists&&doc.data()?.amrData){
+   cloudApplying=true;
+   data=normalizeData(doc.data().amrData);
+   localStorage.setItem(KEY,JSON.stringify(data));
+   cloudApplying=false;
+   cloudReady=true;
+   console.log('✅ AMR 已從 Firebase 讀取資料');
    render();
-loadCloud().then(startCloudListener);
-   toast('Firebase 資料已同步');
   }else{
-   await saveCloud();
-   toast('Firebase 已建立 AMR 資料');
+   cloudReady=true;
+   return cloud.dataDoc.set({amrData:data,createdAt:cloud.now?cloud.now():new Date(),updatedAt:cloud.now?cloud.now():new Date()}, {merge:true})
+    .then(()=>console.log('✅ AMR 已建立 Firebase 初始資料'));
   }
- }catch(e){
-  console.error('Firebase 讀取失敗',e);
-  toast('Firebase 讀取失敗，請檢查規則');
- }
-}
-function startCloudListener(){
- if(!window.AMRFirebase?.enabled || !window.AMRFirebase?.dataDoc) return;
- window.AMRFirebase.dataDoc.onSnapshot(snap=>{
-  if(!snap.exists || cloudSaving) return;
-  let cloud=snap.data()?.amrData;
-  if(!cloud) return;
-  data={...structuredClone(defaultData),...cloud};
-  data.settings={...defaultData.settings,...(data.settings||{})};
-  data.portalItems=data.portalItems||structuredClone(defaultData.portalItems);
-  saveLocalOnly();
+ }).catch(err=>{console.error('❌ Firebase 讀取失敗',err);toast('Firebase 讀取失敗，暫用本機資料')});
+ cloud.dataDoc.onSnapshot(doc=>{
+  if(!doc.exists||!doc.data()?.amrData||!cloudReady)return;
+  cloudApplying=true;
+  data=normalizeData(doc.data().amrData);
+  localStorage.setItem(KEY,JSON.stringify(data));
+  cloudApplying=false;
   render();
- },err=>console.error('Firebase 即時同步失敗',err));
+ },err=>console.error('❌ Firebase 即時監聽失敗',err));
 }
-
+window.amrTestFirebase=()=>{
+ const cloud=window.AMRFirebase;
+ if(!cloud?.enabled)return alert('Firebase 尚未啟用');
+ cloud.dataDoc.set({test:'AMR 連線成功',testTime:new Date().toISOString()},{merge:true})
+  .then(()=>alert('Firebase 測試成功，請到 Firestore 看 platform/settings'))
+  .catch(err=>alert('Firebase 測試失敗：'+err.message));
+};
 function uid(p='id'){return p+'_'+Math.random().toString(36).slice(2,9)}
 function today(){let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function now(){return new Date().toLocaleString()}
@@ -157,7 +160,7 @@ function friendInputs(){let html=`<h3>新朋友名單</h3>`;for(let i=1;i<=frien
 window.addFriend=()=>{friendCount++;render()}
 window.renderCheckinMembers=t=>{document.getElementById('checkinName').innerHTML=memberOptions(t)}
 function rank(){let pid=statOffset===null?periodOfDate().id:'w'+statOffset,rec=recordsByPeriod(pid),tr=rankTeams(rec),pr=rankPeople(rec);shell(`<section class="card"><h2>排行榜</h2><div class="item"><div class="name">🟢 ${periodLabel(periodById(pid))}</div><div class="actions"><button class="btn" onclick="statOffset=(statOffset===null?currentOffset():statOffset)-1;render()">⬅ 上一週</button><button class="btn primary" onclick="statOffset=currentOffset();render()">本週</button><button class="btn" onclick="statOffset=(statOffset===null?currentOffset():statOffset)+1;render()">下一週 ➡</button></div></div><div class="stats"><div class="stat">總分<b>${rec.reduce((n,r)=>n+Number(r.points||0),0)}</b></div><div class="stat">紀錄數<b>${rec.length}</b></div><div class="stat">新朋友<b>${rec.reduce((n,r)=>n+(r.friends||[]).length,0)}</b></div><div class="stat">第一名<b>${tr[0]?.team||'尚無'}</b></div></div></section><div class="grid2"><section class="card"><h2>團隊排行</h2>${rows(tr,'team')}</section><section class="card"><h2>個人排行</h2>${rows(pr,'person')}</section></div><section class="card"><h2>積分流水帳</h2>${rec.slice().reverse().map(recordCard).join('')||'<div class="empty">尚無紀錄</div>'}</section>`)}
-function admin(){shell(`<section class="card"><h2>系統設定</h2><form id="brandForm"><div class="grid3"><label class="field"><span>主標題</span><input name="mainTitle" value="${data.settings.mainTitle}"></label><label class="field"><span>副標題</span><input name="subTitle" value="${data.settings.subTitle}"></label><label class="field"><span>標語</span><input name="slogan" value="${data.settings.slogan}"></label></div><label class="field"><span>首頁公告</span><textarea name="notice">${data.settings.notice||''}</textarea></label><button class="btn primary wide">儲存品牌文字</button></form></section><section class="card"><h2>日期區間設定</h2><form id="dateForm"><div class="grid3"><label class="field"><span>基準開始日期</span><input type="date" name="baseStart" value="${data.settings.baseStart}"></label><label class="field"><span>每週天數</span><input type="number" name="weekDays" value="${data.settings.weekDays||7}"></label><label class="field"><span>前/後顯示</span><input type="text" value="前 ${data.settings.showBefore||2} 週，後 ${data.settings.showAfter||5} 週" disabled></label></div><div class="grid2"><label class="field"><span>前面顯示幾週</span><input type="number" name="showBefore" value="${data.settings.showBefore||2}"></label><label class="field"><span>後面顯示幾週</span><input type="number" name="showAfter" value="${data.settings.showAfter||5}"></label></div><button class="btn orange wide">儲存日期設定</button><p class="muted">只要設定基準開始日期，系統會自動產生 7 天一期的日期區間。</p></form></section><section class="card"><h2>目前可選區間</h2>${visiblePeriods().map(p=>`<div class="item"><div class="name">${periodLabel(p)}${p.offset===currentOffset()?'（本週）':''}</div></div>`).join('')}</section><section class="card"><h2>隊伍與成員</h2><div class="grid2"><section><h3>新增隊伍</h3><form id="teamForm"><input name="team" placeholder="隊伍名稱"><button class="btn primary wide">新增</button></form>${data.teams.map(t=>`<div class="item"><div class="name">${t.name}</div><div class="actions"><button class="btn small blue" onclick="renameTeam('${t.id}')">改名</button><button class="btn small red" onclick="delTeam('${t.id}')">刪除</button></div></div>`).join('')}</section><section><h3>新增成員</h3><form id="memberForm"><select name="team">${data.teams.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}</select><input name="name" placeholder="姓名"><button class="btn primary wide">新增</button></form>${people().map(p=>`<span class="pill">${p.team}｜${p.name}</span>`).join('')}</section></div></section><section class="card"><h2>Portal 管理</h2><form id="portalForm"><div class="grid3"><label class="field"><span>圖示</span><input name="icon" placeholder="例如：🎯"></label><label class="field"><span>名稱</span><input name="name" placeholder="活動名稱"></label><label class="field"><span>是否顯示首頁六宮格</span><select name="featured"><option value="false">更多活動</option><option value="true">首頁顯示</option></select></label></div><label class="field"><span>說明</span><input name="desc" placeholder="簡短說明"></label><button class="btn primary wide">新增 Portal 項目</button></form>${(data.portalItems||[]).map(x=>`<div class="item"><div class="name">${x.icon||'⭐'} ${x.name}</div><div class="muted">${x.featured?'首頁六宮格':'更多活動'}｜${x.desc||''}</div><div class="actions"><button class="btn small" onclick="togglePortal('${x.id}')">${x.featured?'移到更多':'設為首頁'}</button><button class="btn small red" onclick="delPortal('${x.id}')">刪除</button></div></div>`).join('')}</section><section class="card"><h2>積分規則</h2>${data.rules.map(r=>`<div class="item"><div class="name">${r.name}</div><div class="grid3"><label class="field"><span>分數</span><input type="number" value="${r.points}" onchange="updateRule('${r.id}','points',this.value)"></label><label class="field"><span>新朋友分數</span><input type="number" value="${r.friendPoints||0}" onchange="updateRule('${r.id}','friendPoints',this.value)"></label><label class="field"><span>名稱</span><input value="${r.name}" onchange="updateRule('${r.id}','name',this.value)"></label></div></div>`).join('')}</section>`)}
+function admin(){shell(`<section class="card"><h2>系統設定</h2><div class="item"><div class="name">☁️ Firebase 雲端同步</div><div class="muted">狀態：${window.AMRFirebase?.enabled?'已連線 team-465':'未連線，暫用本機'}</div><button class="btn small primary" onclick="amrTestFirebase()">測試 Firebase</button></div><form id="brandForm"><div class="grid3"><label class="field"><span>主標題</span><input name="mainTitle" value="${data.settings.mainTitle}"></label><label class="field"><span>副標題</span><input name="subTitle" value="${data.settings.subTitle}"></label><label class="field"><span>標語</span><input name="slogan" value="${data.settings.slogan}"></label></div><label class="field"><span>首頁公告</span><textarea name="notice">${data.settings.notice||''}</textarea></label><button class="btn primary wide">儲存品牌文字</button></form></section><section class="card"><h2>日期區間設定</h2><form id="dateForm"><div class="grid3"><label class="field"><span>基準開始日期</span><input type="date" name="baseStart" value="${data.settings.baseStart}"></label><label class="field"><span>每週天數</span><input type="number" name="weekDays" value="${data.settings.weekDays||7}"></label><label class="field"><span>前/後顯示</span><input type="text" value="前 ${data.settings.showBefore||2} 週，後 ${data.settings.showAfter||5} 週" disabled></label></div><div class="grid2"><label class="field"><span>前面顯示幾週</span><input type="number" name="showBefore" value="${data.settings.showBefore||2}"></label><label class="field"><span>後面顯示幾週</span><input type="number" name="showAfter" value="${data.settings.showAfter||5}"></label></div><button class="btn orange wide">儲存日期設定</button><p class="muted">只要設定基準開始日期，系統會自動產生 7 天一期的日期區間。</p></form></section><section class="card"><h2>目前可選區間</h2>${visiblePeriods().map(p=>`<div class="item"><div class="name">${periodLabel(p)}${p.offset===currentOffset()?'（本週）':''}</div></div>`).join('')}</section><section class="card"><h2>隊伍與成員</h2><div class="grid2"><section><h3>新增隊伍</h3><form id="teamForm"><input name="team" placeholder="隊伍名稱"><button class="btn primary wide">新增</button></form>${data.teams.map(t=>`<div class="item"><div class="name">${t.name}</div><div class="actions"><button class="btn small blue" onclick="renameTeam('${t.id}')">改名</button><button class="btn small red" onclick="delTeam('${t.id}')">刪除</button></div></div>`).join('')}</section><section><h3>新增成員</h3><form id="memberForm"><select name="team">${data.teams.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}</select><input name="name" placeholder="姓名"><button class="btn primary wide">新增</button></form>${people().map(p=>`<span class="pill">${p.team}｜${p.name}</span>`).join('')}</section></div></section><section class="card"><h2>Portal 管理</h2><form id="portalForm"><div class="grid3"><label class="field"><span>圖示</span><input name="icon" placeholder="例如：🎯"></label><label class="field"><span>名稱</span><input name="name" placeholder="活動名稱"></label><label class="field"><span>是否顯示首頁六宮格</span><select name="featured"><option value="false">更多活動</option><option value="true">首頁顯示</option></select></label></div><label class="field"><span>說明</span><input name="desc" placeholder="簡短說明"></label><button class="btn primary wide">新增 Portal 項目</button></form>${(data.portalItems||[]).map(x=>`<div class="item"><div class="name">${x.icon||'⭐'} ${x.name}</div><div class="muted">${x.featured?'首頁六宮格':'更多活動'}｜${x.desc||''}</div><div class="actions"><button class="btn small" onclick="togglePortal('${x.id}')">${x.featured?'移到更多':'設為首頁'}</button><button class="btn small red" onclick="delPortal('${x.id}')">刪除</button></div></div>`).join('')}</section><section class="card"><h2>積分規則</h2>${data.rules.map(r=>`<div class="item"><div class="name">${r.name}</div><div class="grid3"><label class="field"><span>分數</span><input type="number" value="${r.points}" onchange="updateRule('${r.id}','points',this.value)"></label><label class="field"><span>新朋友分數</span><input type="number" value="${r.friendPoints||0}" onchange="updateRule('${r.id}','friendPoints',this.value)"></label><label class="field"><span>名稱</span><input value="${r.name}" onchange="updateRule('${r.id}','name',this.value)"></label></div></div>`).join('')}</section>`)}
 function bindForms(){let f=document.getElementById('scoreForm');if(f)f.onsubmit=e=>{e.preventDefault();let fd=new FormData(f);scoreState.periodId=fd.get('periodId');scoreState.team=fd.get('team');scoreState.name=fd.get('name');scoreState.manual=Number(fd.get('manual')||0);scoreState.note=fd.get('note')||'';let total=scoreTotal();if(total===0)return toast('本次得分為 0');let rec={id:editId||uid('rec'),date:now(),createdDate:today(),periodId:scoreState.periodId,team:scoreState.team,name:scoreState.name,mode:scoreMode,items:structuredClone(scoreState.items),manual:scoreState.manual,points:total,note:scoreState.note||'手動積分',type:scoreMode==='team'?'團隊積分':'個人積分'};if(editId){let i=data.records.findIndex(x=>x.id===editId);if(i>=0)data.records[i]={...data.records[i],...rec};editId=null}else data.records.push(rec);scoreState={periodId:scoreState.periodId,team:scoreState.team,name:scoreState.name,items:{},manual:0,note:'',showPeriod:false};save();toast('已儲存');go('home')};let ef=document.getElementById('eventForm');if(ef)ef.onsubmit=e=>{e.preventDefault();let fd=new FormData(ef),r=rule(fd.get('type'));data.events.forEach(x=>x.active=false);data.events.push({id:uid('ev'),name:fd.get('name')||r.name,type:r.id,periodId:fd.get('periodId'),date:fd.get('date'),active:true,createdAt:now()});save();toast('活動已建立');go('qr')};let cf=document.getElementById('checkinForm');if(cf)cf.onsubmit=e=>{e.preventDefault();let fd=new FormData(cf),ev=data.events.find(x=>x.id===cf.dataset.event),name=fd.get('name');let friends=[];for(let i=1;i<=friendCount;i++){let fn=(fd.get('friendName'+i)||'').trim(),ph=(fd.get('friendPhone'+i)||'').trim();if(fn)friends.push({name:fn,phone:ph})}checkinMember(ev.id,name,friends,'QR簽到')};let bf=document.getElementById('brandForm');if(bf)bf.onsubmit=e=>{e.preventDefault();let fd=new FormData(bf);data.settings.mainTitle=fd.get('mainTitle');data.settings.subTitle=fd.get('subTitle');data.settings.slogan=fd.get('slogan');data.settings.notice=fd.get('notice');save();toast('文字已更新');render()};let df=document.getElementById('dateForm');if(df)df.onsubmit=e=>{e.preventDefault();let fd=new FormData(df);data.settings.baseStart=fd.get('baseStart');data.settings.weekDays=Number(fd.get('weekDays')||7);data.settings.showBefore=Number(fd.get('showBefore')||2);data.settings.showAfter=Number(fd.get('showAfter')||5);save();toast('日期設定已更新');render()};let tf=document.getElementById('teamForm');if(tf)tf.onsubmit=e=>{e.preventDefault();let v=new FormData(tf).get('team');if(v){data.teams.push({id:uid('t'),name:v,members:[]});save();render()}};let mf=document.getElementById('memberForm');if(mf)mf.onsubmit=e=>{e.preventDefault();let fd=new FormData(mf),t=data.teams.find(x=>x.id===fd.get('team'));if(t&&fd.get('name')){t.members.push(fd.get('name'));save();render()}};let pf=document.getElementById('portalForm');if(pf)pf.onsubmit=e=>{e.preventDefault();let fd=new FormData(pf),name=(fd.get('name')||'').trim();if(!name)return toast('請輸入名稱');data.portalItems=data.portalItems||[];data.portalItems.push({id:uid('portal'),icon:fd.get('icon')||'⭐',name,desc:fd.get('desc')||'',featured:fd.get('featured')==='true',links:[]});save();toast('Portal 已新增');render()}}
 function checkinMember(eventId,name,friends=[],source='補簽'){let ev=data.events.find(x=>x.id===eventId),r=rule(ev.type);if(data.records.some(x=>x.eventId===eventId&&x.name===name))return toast('此活動已簽到');let pts=Number(r.points||0)+Number(friends.length||0)*Number(r.friendPoints||r.points||0);data.records.push({id:uid('rec'),eventId,date:now(),createdDate:today(),periodId:ev.periodId,team:teamOf(name),name,mode:'team',type:r.name,points:pts,friends,note:`${ev.name}｜${source}`,items:{[r.id]:1},manual:0});save();toast('簽到成功');go('home')}
 window.manualCheckin=(eventId,name)=>checkinMember(eventId,name,[],'管理員補簽')
@@ -174,4 +177,5 @@ function portal(){let id=new URLSearchParams(location.search).get('id'),items=da
 window.togglePortal=id=>{let x=(data.portalItems||[]).find(p=>p.id===id);if(x){x.featured=!x.featured;save();render()}}
 window.delPortal=id=>{if(confirm('刪除此 Portal 項目？')){data.portalItems=(data.portalItems||[]).filter(p=>p.id!==id);save();render()}}
 function render(){if(page==='home')home();else if(page==='score')score();else if(page==='qr')qr();else if(page==='checkin')checkin();else if(page==='rank')rank();else if(page==='portal')portal();else if(page==='admin')admin();else home()}
+initCloud();
 render();
