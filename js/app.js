@@ -39,7 +39,63 @@ let data=load(), page=new URLSearchParams(location.search).get('page')||'home', 
 let scoreState={periodId:'',team:'',name:'',items:{},manual:0,note:'',showPeriod:false}, historyFilter={q:'',periodId:'',team:''};
 
 function load(){try{let x=JSON.parse(localStorage.getItem(KEY));if(!x)return structuredClone(defaultData);x.settings={...defaultData.settings,...(x.settings||{})};x.portalItems=x.portalItems||structuredClone(defaultData.portalItems);return x}catch(e){return structuredClone(defaultData)}}
-function save(){localStorage.setItem(KEY,JSON.stringify(data))}
+
+function save(){
+ localStorage.setItem(KEY,JSON.stringify(data));
+ saveCloud();
+}
+function saveLocalOnly(){localStorage.setItem(KEY,JSON.stringify(data))}
+let cloudSaving=false, cloudLoaded=false;
+async function saveCloud(){
+ if(!window.AMRFirebase?.enabled || !window.AMRFirebase?.dataDoc || cloudSaving) return;
+ try{
+  cloudSaving=true;
+  await window.AMRFirebase.dataDoc.set({
+   amrData: data,
+   updatedAt: window.AMRFirebase.now()
+  },{merge:true});
+ }catch(e){
+  console.error('Firebase 儲存失敗',e);
+  toast('Firebase 儲存失敗，請檢查規則');
+ }finally{cloudSaving=false}
+}
+async function loadCloud(){
+ if(!window.AMRFirebase?.enabled || !window.AMRFirebase?.dataDoc) return;
+ try{
+  let snap=await window.AMRFirebase.dataDoc.get();
+  let cloud=snap.exists ? snap.data()?.amrData : null;
+  if(cloud){
+   data={...structuredClone(defaultData),...cloud};
+   data.settings={...defaultData.settings,...(data.settings||{})};
+   data.portalItems=data.portalItems||structuredClone(defaultData.portalItems);
+   saveLocalOnly();
+   cloudLoaded=true;
+   render();
+loadCloud().then(startCloudListener);
+   toast('Firebase 資料已同步');
+  }else{
+   await saveCloud();
+   toast('Firebase 已建立 AMR 資料');
+  }
+ }catch(e){
+  console.error('Firebase 讀取失敗',e);
+  toast('Firebase 讀取失敗，請檢查規則');
+ }
+}
+function startCloudListener(){
+ if(!window.AMRFirebase?.enabled || !window.AMRFirebase?.dataDoc) return;
+ window.AMRFirebase.dataDoc.onSnapshot(snap=>{
+  if(!snap.exists || cloudSaving) return;
+  let cloud=snap.data()?.amrData;
+  if(!cloud) return;
+  data={...structuredClone(defaultData),...cloud};
+  data.settings={...defaultData.settings,...(data.settings||{})};
+  data.portalItems=data.portalItems||structuredClone(defaultData.portalItems);
+  saveLocalOnly();
+  render();
+ },err=>console.error('Firebase 即時同步失敗',err));
+}
+
 function uid(p='id'){return p+'_'+Math.random().toString(36).slice(2,9)}
 function today(){let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function now(){return new Date().toLocaleString()}
