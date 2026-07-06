@@ -1,0 +1,143 @@
+
+:root{
+  --bg:#fff8ec;
+  --card:#ffffff;
+  --card2:#fff3d8;
+  --line:#f3d59b;
+  --gold:#d89a18;
+  --orange:#ff8a00;
+  --text:#243047;
+  --muted:#748094;
+  --green:#16a34a;
+  --red:#ef4444;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{
+  margin:0;min-height:100%;
+  background:
+    radial-gradient(circle at 20% 0%,rgba(255,190,92,.30),transparent 28%),
+    radial-gradient(circle at 90% 10%,rgba(255,221,136,.35),transparent 24%),
+    linear-gradient(180deg,#fff7e8,#fffdf8 48%,#f8fbff);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",Arial,sans-serif
+}
+button,input,select,textarea{font:inherit}button,a{cursor:pointer}a{text-decoration:none;color:inherit}
+#app{max-width:1120px;margin:auto;padding:0 14px calc(104px + env(safe-area-inset-bottom))}
+.hero{
+  margin:0 -14px 16px;padding:24px 16px 18px;
+  border-radius:0 0 34px 34px;
+  background:
+    radial-gradient(circle at 50% 8%,rgba(255,255,255,.65),transparent 34%),
+    linear-gradient(135deg,#ffb347,#ffd36a 45%,#fff1c1);
+  color:#2b240f;
+  box-shadow:0 18px 44px rgba(223,142,0,.22);
+}
+.logo{text-align:center;padding:12px 0}
+.logo .amr{
+  display:inline-block;
+  font-size:62px;font-weight:1000;letter-spacing:4px;
+  background:linear-gradient(180deg,#2b240f,#9a5d00,#2b240f);
+  -webkit-background-clip:text;color:transparent
+}
+.logo h1{margin:4px 0;color:#2b240f;font-size:35px;font-weight:1000}
+.logo p{margin:0;color:#5f4416;font-size:13px;font-weight:1000;letter-spacing:3px}
+.topNav{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+  background:rgba(255,255,255,.42);border:1px solid rgba(255,255,255,.72);
+  border-radius:20px;padding:7px
+}
+.topNav a{
+  display:block;text-align:center;padding:11px 2px;font-weight:1000;color:#5f4416;border-radius:15px
+}
+.topNav a.active{background:#fff;color:#d07300;box-shadow:0 8px 22px rgba(180,107,0,.16)}
+.card{
+  background:rgba(255,255,255,.92);
+  border:1px solid rgba(243,213,155,.9);
+  border-radius:26px;padding:17px;margin:13px 0;
+  box-shadow:0 14px 34px rgba(36,48,71,.08)
+}
+.card h2{margin:0 0 12px;color:#b56a00;font-size:22px}
+.card h3{margin:14px 0 8px;color:#9a5d00}
+.notice{
+  background:linear-gradient(135deg,#fff,#fff4d5);
+  border:1px solid #f2d99c;border-radius:22px;padding:14px 16px;
+}
+.heroWeek{
+  display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;
+  background:linear-gradient(135deg,#fff,#fff5dd);
+  border:1px solid #f0d38f;border-radius:28px;padding:18px;
+  box-shadow:0 14px 30px rgba(216,154,24,.12)
+}
+.heroWeek .label{font-weight:1000;color:#b56a00}
+.heroWeek .date{font-size:34px;font-weight:1000;color:#243047;margin-top:4px}
+.heroWeek .days{background:#fff;border:1px solid #f0d38f;border-radius:18px;padding:10px 14px;text-align:center;font-weight:1000;color:#d07300}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.quick a{
+  min-height:96px;border:1px solid #f2d99c;border-radius:24px;padding:16px;
+  background:#fff;font-weight:1000;box-shadow:0 12px 28px rgba(36,48,71,.08)
+}
+.quick span{display:block;font-size:30px;margin-bottom:9px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.stat{
+  border:1px solid #f2d99c;border-radius:24px;padding:16px;background:#fff;
+  box-shadow:0 12px 28px rgba(36,48,71,.07)
+}
+.stat b{display:block;color:#d07300;font-size:24px;margin-top:5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.podium{display:grid;grid-template-columns:1fr 1.12fr 1fr;gap:10px;align-items:end;margin-top:10px}
+.podium .pod{
+  border:1px solid #f2d99c;border-radius:24px;background:#fff;padding:14px 10px;text-align:center;
+  box-shadow:0 10px 24px rgba(36,48,71,.08)
+}
+.podium .first{min-height:168px;background:linear-gradient(180deg,#fff8d9,#fff)}
+.podium .second{min-height:138px}
+.podium .third{min-height:126px}
+.podium .medalBig{font-size:38px;line-height:1}
+.podium .podName{font-size:17px;font-weight:1000;margin-top:9px;word-break:break-word}
+.podium .podScore{color:#d07300;font-size:24px;font-weight:1000;margin-top:6px}
+.row{
+  display:grid;grid-template-columns:40px 1fr 82px;gap:8px;align-items:center;
+  padding:12px;border-radius:17px;background:#fff;margin:8px 0;border:1px solid #eef0f3
+}
+.medal{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#f1f5f9;font-weight:1000}
+.one{background:linear-gradient(135deg,#f59e0b,#fde68a);color:#111827}.two{background:linear-gradient(135deg,#94a3b8,#e5e7eb);color:#111827}.three{background:linear-gradient(135deg,#b45309,#fdba74);color:#111827}
+.name{font-weight:1000}.muted{color:var(--muted);font-size:12px;font-weight:800}.score{text-align:right;color:#d07300;font-size:18px;font-weight:1000}
+.btn{
+  display:inline-block;border:1px solid #f0d38f;border-radius:16px;background:#fff;color:#243047;
+  padding:11px 14px;font-weight:1000;text-align:center
+}
+.primary{background:linear-gradient(135deg,#ffb347,#ffd36a);color:#2b240f;border:none}
+.orange{background:linear-gradient(135deg,#ff8a00,#ffb347);color:#fff;border:none}
+.blue{background:linear-gradient(135deg,#2563eb,#38bdf8);color:#fff;border:none}
+.green{background:linear-gradient(135deg,#16a34a,#86efac);color:#fff;border:none}
+.red{background:linear-gradient(135deg,#ef4444,#fb7185);color:#fff;border:none}
+.small{padding:7px 10px;border-radius:12px;font-size:13px}.wide{width:100%}
+.field{display:block;margin:12px 0}
+.field span{display:block;color:#566276;font-size:13px;font-weight:1000;margin-bottom:7px}
+input,select,textarea{
+  width:100%;border-radius:16px;border:1px solid #e4d2a9;background:#fff;color:#243047;
+  padding:12px;outline:none
+}
+option{color:#111827}textarea{min-height:80px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.tabs{display:flex;gap:8px;overflow:auto;margin:8px 0}.tab.active{background:linear-gradient(135deg,#ffb347,#ffd36a);color:#2b240f;border:none}
+.item{border:1px solid #eef0f3;border-radius:18px;padding:12px;margin:9px 0;background:#fff}
+.total{display:flex;justify-content:space-between;align-items:center;margin:14px 0;padding:15px;border-radius:20px;background:#fff5dd;border:1px solid #f0d38f;font-weight:1000}.total b{font-size:28px;color:#d07300}
+.ctrl{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.ctrl button{width:38px;height:38px;border-radius:14px;background:#fff;border:1px solid #f0d38f;color:#d07300;font-size:22px;font-weight:1000}.num{min-width:30px;text-align:center;font-weight:1000}
+.empty{padding:20px;text-align:center;color:var(--muted);border:1px dashed #f0d38f;border-radius:18px}.pill{display:inline-block;border:1px solid #f0d38f;border-radius:999px;padding:5px 9px;color:#b56a00;font-size:12px;font-weight:1000;margin:2px;background:#fff}
+#bottomNav{
+  position:fixed;left:0;right:0;bottom:0;z-index:9999;background:rgba(255,255,255,.92);
+  backdrop-filter:blur(14px);border-top:1px solid #f2d99c;display:grid;grid-template-columns:repeat(4,1fr);
+  padding:8px 6px calc(8px + env(safe-area-inset-bottom));max-width:1120px;margin:auto
+}
+#bottomNav a{display:block;text-align:center;color:#748094;font-size:12px;font-weight:1000;border-radius:14px;padding:6px 2px}
+#bottomNav span{display:block;font-size:22px}#bottomNav a.active{background:linear-gradient(135deg,#ffb347,#ffd36a);color:#2b240f}
+.toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);z-index:10000;background:#243047;color:#fff;border-radius:999px;padding:12px 18px;font-weight:1000}
+@media(max-width:760px){
+  .logo .amr{font-size:54px}.logo h1{font-size:34px}.topNav a{font-size:12px;padding:10px 2px}
+  .quick,.stats,.grid2,.grid3{grid-template-columns:1fr 1fr}
+  .podium{grid-template-columns:1fr;align-items:stretch}.podium .first,.podium .second,.podium .third{min-height:auto}
+  .row{grid-template-columns:36px 1fr 68px}#app{padding-left:10px;padding-right:10px}.hero{margin-left:-10px;margin-right:-10px}.hideM{display:none}.quick a{min-height:82px}
+  .heroWeek{grid-template-columns:1fr}.heroWeek .date{font-size:30px}
+}
